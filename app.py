@@ -286,7 +286,7 @@ def add_bg(image_file):
         pass  # If background image not found, continue without it
 
 
-add_bg("background1.jpg")
+add_bg("background 2.jpg")
 
 
 # ---------------- MODEL ----------------
