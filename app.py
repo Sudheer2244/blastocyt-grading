@@ -7,6 +7,30 @@ import base64
 from datetime import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+import json
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+import tempfile
+import os
+
+# Page configuration
+st.set_page_config(
+    page_title="Blastocyst Grading System",
+    page_icon="🧬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Initialize session state for history
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
+if 'current_analysis' not in st.session_state:
+    st.session_state.current_analysis = None
 
 
 #------------Inferences------------
@@ -15,45 +39,27 @@ def get_inference(icm, te, exp):
 
     # ICM (Inner Cell Mass)
     if icm >= 4:
-        notes.append(
-            "🟢 **ICM:** Good inner cell mass – likely healthy embryoblast."
-        )
+        notes.append("🟢 **ICM:** Good inner cell mass – likely healthy embryoblast.")
     elif icm == 3:
-        notes.append(
-            "🟡 **ICM:** Moderate ICM – acceptable but not ideal."
-        )
+        notes.append("🟡 **ICM:** Moderate ICM – acceptable but not ideal.")
     else:
-        notes.append(
-            "🔴 **ICM:** Poor ICM – lower likelihood of successful implantation."
-        )
+        notes.append("🔴 **ICM:** Poor ICM – lower likelihood of successful implantation.")
 
     # TE (Trophectoderm)
     if te >= 4:
-        notes.append(
-            "🟢 **TE:** Strong trophectoderm – better implantation probability."
-        )
+        notes.append("🟢 **TE:** Strong trophectoderm – better implantation probability.")
     elif te == 3:
-        notes.append(
-            "🟡 **TE:** Average TE – may still be viable."
-        )
+        notes.append("🟡 **TE:** Average TE – may still be viable.")
     else:
-        notes.append(
-            "🔴 **TE:** Weak TE – may reduce implantation chances."
-        )
+        notes.append("🔴 **TE:** Weak TE – may reduce implantation chances.")
 
     # EXP (Expansion grade)
     if exp >= 4:
-        notes.append(
-            "🟢 **Expansion:** Well-expanded blastocyst – good development."
-        )
+        notes.append("🟢 **Expansion:** Well-expanded blastocyst – good development.")
     elif exp == 3:
-        notes.append(
-            "🟡 **Expansion:** Moderate expansion – monitor carefully."
-        )
+        notes.append("🟡 **Expansion:** Moderate expansion – monitor carefully.")
     else:
-        notes.append(
-            "🔴 **Expansion:** Poor expansion – embryo may be underdeveloped."
-        )
+        notes.append("🔴 **Expansion:** Poor expansion – embryo may be underdeveloped.")
 
     # Overall summary
     if icm >= 4 and te >= 4 and exp >= 4:
@@ -70,7 +76,6 @@ def get_doctor_suggestions(icm, te, exp):
     """Generate detailed doctor suggestions based on grades"""
     suggestions = []
     
-    # Calculate overall quality score
     avg_score = (icm + te + exp) / 3
     
     if avg_score >= 4:
@@ -97,7 +102,6 @@ def get_doctor_suggestions(icm, te, exp):
         suggestions.append("• If transfer is attempted, manage patient expectations appropriately")
         suggestions.append("• Consider comprehensive fertility evaluation")
     
-    # Specific recommendations based on individual parameters
     suggestions.append("\n**Parameter-Specific Recommendations:**")
     
     if icm < 3:
@@ -126,119 +130,232 @@ def get_doctor_suggestions(icm, te, exp):
     return suggestions
 
 
-def generate_detailed_report(icm, te, exp, img_array, patient_info=None):
-    """Generate a detailed medical report"""
-    report = []
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def calculate_success_probability(icm, te, exp):
+    """Calculate estimated success probability based on grades"""
+    # Weighted formula based on clinical research
+    base_score = (icm * 0.4 + te * 0.35 + exp * 0.25) / 5 * 100
     
-    report.append("=" * 80)
-    report.append("BLASTOCYST GRADING REPORT".center(80))
-    report.append("=" * 80)
-    report.append(f"\nReport Generated: {timestamp}")
-    report.append(f"Analysis System: AI-Powered Embryo Grading System v1.0")
-    
-    if patient_info:
-        report.append("\n" + "-" * 80)
-        report.append("PATIENT INFORMATION")
-        report.append("-" * 80)
-        for key, value in patient_info.items():
-            report.append(f"{key}: {value}")
-    
-    report.append("\n" + "-" * 80)
-    report.append("GRADING RESULTS")
-    report.append("-" * 80)
-    report.append(f"Inner Cell Mass (ICM): {icm}/5")
-    report.append(f"Trophectoderm (TE): {te}/5")
-    report.append(f"Expansion Grade (EXP): {exp}/5")
-    
-    # Calculate quality score
-    avg_score = (icm + te + exp) / 3
-    report.append(f"\nAverage Quality Score: {avg_score:.2f}/5")
-    
-    if avg_score >= 4:
-        quality = "EXCELLENT"
-    elif avg_score >= 3:
-        quality = "MODERATE"
+    if base_score >= 80:
+        return f"{base_score:.1f}% - Excellent", "success"
+    elif base_score >= 60:
+        return f"{base_score:.1f}% - Good", "warning"
+    elif base_score >= 40:
+        return f"{base_score:.1f}% - Fair", "info"
     else:
-        quality = "POOR"
-    report.append(f"Overall Quality Assessment: {quality}")
+        return f"{base_score:.1f}% - Poor", "error"
+
+
+def generate_pdf_report(icm, te, exp, img_array, patient_info=None, image_path=None):
+    """Generate a professional PDF report"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    story = []
+    styles = getSampleStyleSheet()
     
-    report.append("\n" + "-" * 80)
-    report.append("DETAILED ANALYSIS")
-    report.append("-" * 80)
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1F3C88'),
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
     
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#1F3C88'),
+        spaceAfter=12,
+        spaceBefore=12,
+        fontName='Helvetica-Bold'
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=10,
+        alignment=TA_JUSTIFY,
+        spaceAfter=6
+    )
+    
+    # Title
+    story.append(Paragraph("🧬 BLASTOCYST GRADING REPORT", title_style))
+    story.append(Spacer(1, 0.2*inch))
+    
+    # Report info
+    timestamp = datetime.now().strftime("%B %d, %Y at %H:%M:%S")
+    story.append(Paragraph(f"<b>Report Generated:</b> {timestamp}", body_style))
+    story.append(Paragraph("<b>Analysis System:</b> AI-Powered Embryo Grading System v2.0", body_style))
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Patient Information
+    if patient_info:
+        story.append(Paragraph("PATIENT INFORMATION", heading_style))
+        patient_data = [[k, v] for k, v in patient_info.items()]
+        patient_table = Table(patient_data, colWidths=[2*inch, 4*inch])
+        patient_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F0FE')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        story.append(patient_table)
+        story.append(Spacer(1, 0.3*inch))
+    
+    # Grading Results
+    story.append(Paragraph("GRADING RESULTS", heading_style))
+    
+    avg_score = (icm + te + exp) / 3
+    success_prob, _ = calculate_success_probability(icm, te, exp)
+    
+    grading_data = [
+        ['Parameter', 'Grade', 'Score'],
+        ['Inner Cell Mass (ICM)', f'{icm}/5', '⭐' * icm],
+        ['Trophectoderm (TE)', f'{te}/5', '⭐' * te],
+        ['Expansion (EXP)', f'{exp}/5', '⭐' * exp],
+        ['Average Score', f'{avg_score:.2f}/5', ''],
+        ['Success Probability', success_prob, '']
+    ]
+    
+    grading_table = Table(grading_data, colWidths=[2.5*inch, 1.5*inch, 2*inch])
+    grading_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F3C88')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('TOPPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+    ]))
+    story.append(grading_table)
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Analysis
+    story.append(Paragraph("DETAILED ANALYSIS", heading_style))
     summary, notes = get_inference(icm, te, exp)
-    report.append(f"\n{summary}")
+    
+    clean_summary = summary.replace("**", "").replace("✅", "").replace("⚠️", "").replace("❌", "")
+    story.append(Paragraph(clean_summary, body_style))
+    story.append(Spacer(1, 0.1*inch))
+    
     for note in notes:
-        # Remove emoji and markdown formatting for text report
-        clean_note = note.replace("🟢", "[GOOD]").replace("🟡", "[MODERATE]").replace("🔴", "[POOR]")
-        clean_note = clean_note.replace("**", "")
-        report.append(clean_note)
+        clean_note = note.replace("**", "<b>").replace("**", "</b>").replace("🟢", "✓").replace("🟡", "⚠").replace("🔴", "✗")
+        story.append(Paragraph(clean_note, body_style))
     
-    report.append("\n" + "-" * 80)
-    report.append("CLINICAL RECOMMENDATIONS")
-    report.append("-" * 80)
+    story.append(Spacer(1, 0.3*inch))
     
+    # Clinical Recommendations
+    story.append(Paragraph("CLINICAL RECOMMENDATIONS", heading_style))
     suggestions = get_doctor_suggestions(icm, te, exp)
+    
     for suggestion in suggestions:
-        clean_suggestion = suggestion.replace("**", "")
-        report.append(clean_suggestion)
+        clean_suggestion = suggestion.replace("**", "<b>").replace("**", "</b>")
+        story.append(Paragraph(clean_suggestion, body_style))
     
-    report.append("\n" + "-" * 80)
-    report.append("GRADING CRITERIA REFERENCE")
-    report.append("-" * 80)
-    report.append("\nInner Cell Mass (ICM) Grading:")
-    report.append("  Grade 5: Many cells, tightly packed")
-    report.append("  Grade 4: Several cells, loosely grouped")
-    report.append("  Grade 3: Few cells")
-    report.append("  Grade 2: Very few cells")
-    report.append("  Grade 1: Poor, degenerating cells")
+    story.append(Spacer(1, 0.3*inch))
     
-    report.append("\nTrophectoderm (TE) Grading:")
-    report.append("  Grade 5: Many cells forming cohesive epithelium")
-    report.append("  Grade 4: Several cells forming loose epithelium")
-    report.append("  Grade 3: Few cells")
-    report.append("  Grade 2: Very few cells")
-    report.append("  Grade 1: Poor, few large cells")
+    # Grading Criteria Reference
+    story.append(Paragraph("GRADING CRITERIA REFERENCE", heading_style))
     
-    report.append("\nExpansion (EXP) Grading:")
-    report.append("  Grade 5: Hatching/hatched blastocyst")
-    report.append("  Grade 4: Expanded, thin zona pellucida")
-    report.append("  Grade 3: Full blastocyst, thick zona")
-    report.append("  Grade 2: Early blastocyst, small cavity")
-    report.append("  Grade 1: Early blastocyst, barely visible cavity")
+    criteria_text = """
+    <b>Inner Cell Mass (ICM):</b><br/>
+    Grade 5: Many cells, tightly packed<br/>
+    Grade 4: Several cells, loosely grouped<br/>
+    Grade 3: Few cells<br/>
+    Grade 2: Very few cells<br/>
+    Grade 1: Poor, degenerating cells<br/><br/>
     
-    report.append("\n" + "=" * 80)
-    report.append("DISCLAIMER")
-    report.append("=" * 80)
-    report.append("This report is generated by an AI-assisted analysis system and should be")
-    report.append("reviewed and validated by qualified embryologists and fertility specialists.")
-    report.append("Clinical decisions should be made in conjunction with comprehensive patient")
-    report.append("evaluation and professional medical judgment.")
-    report.append("=" * 80)
+    <b>Trophectoderm (TE):</b><br/>
+    Grade 5: Many cells forming cohesive epithelium<br/>
+    Grade 4: Several cells forming loose epithelium<br/>
+    Grade 3: Few cells<br/>
+    Grade 2: Very few cells<br/>
+    Grade 1: Poor, few large cells<br/><br/>
     
-    return "\n".join(report)
+    <b>Expansion (EXP):</b><br/>
+    Grade 5: Hatching/hatched blastocyst<br/>
+    Grade 4: Expanded, thin zona pellucida<br/>
+    Grade 3: Full blastocyst, thick zona<br/>
+    Grade 2: Early blastocyst, small cavity<br/>
+    Grade 1: Early blastocyst, barely visible cavity
+    """
+    story.append(Paragraph(criteria_text, body_style))
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Disclaimer
+    story.append(Paragraph("DISCLAIMER", heading_style))
+    disclaimer_text = """
+    This report is generated by an AI-assisted analysis system and should be reviewed and 
+    validated by qualified embryologists and fertility specialists. Clinical decisions should 
+    be made in conjunction with comprehensive patient evaluation and professional medical judgment.
+    """
+    story.append(Paragraph(disclaimer_text, body_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+def save_to_history(patient_info, icm, te, exp, timestamp):
+    """Save analysis to history"""
+    history_entry = {
+        'timestamp': timestamp,
+        'patient_info': patient_info,
+        'icm': icm,
+        'te': te,
+        'exp': exp,
+        'avg_score': (icm + te + exp) / 3
+    }
+    st.session_state.history.insert(0, history_entry)
+    # Keep only last 50 entries
+    if len(st.session_state.history) > 50:
+        st.session_state.history = st.session_state.history[:50]
 
 
 IMG_SIZE = 224
 
-st.markdown(
-    """
+# Custom CSS
+st.markdown("""
     <style>
-    .center-box {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        width: 100%;
+    /* Main container styling */
+    .main {
+        padding: 0rem 1rem;
     }
-
-    .center-box h3, 
-    .center-box p, 
-    .center-box div {
-        color: #6e6e6e;
-        font-weight: 600;
+    
+    /* Center content */
+    .center-content {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    /* Card styling */
+    .info-card {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 20px 0;
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        margin: 10px 0;
     }
     
     .suggestion-box {
@@ -247,28 +364,47 @@ st.markdown(
         border-radius: 12px;
         border-left: 5px solid #FFA500;
         margin: 15px 0;
-        text-align: left;
     }
     
-    .download-section {
-        margin-top: 25px;
-        padding: 20px;
-        background: rgba(230, 240, 255, 0.9);
-        border-radius: 12px;
+    /* Button styling */
+    .stDownloadButton button {
+        width: 100%;
+        background: linear-gradient(90deg, #1F3C88 0%, #2E5BFF 100%);
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 12px;
+        border: none;
+    }
+    
+    /* History item styling */
+    .history-item {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        border-left: 4px solid #1F3C88;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Stats box */
+    .stats-box {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+        margin: 10px 0;
     }
     </style>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
 
-# ---------------- BACKGROUND ----------------
 def add_bg(image_file):
     try:
         with open(image_file, "rb") as f:
             data = f.read()
         encoded = base64.b64encode(data).decode()
-
         st.markdown(
             f"""
             <style>
@@ -283,300 +419,279 @@ def add_bg(image_file):
             unsafe_allow_html=True
         )
     except:
-        pass  # If background image not found, continue without it
-
+        pass
 
 add_bg("background 2.jpg")
 
+# Load model
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("embryo_output_model.keras")
 
-# ---------------- MODEL ----------------
-model = tf.keras.models.load_model("embryo_output_model.keras")
-
-
-# ---------------- CENTER LAYOUT ----------------
-st.markdown("""
-<style>
-.center-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("<div class='center-container'>", unsafe_allow_html=True)
+model = load_model()
 
 
-# ---------------- HEADER ----------------
-st.markdown(
-    """
-    <h1 style='text-align:center; color:#1F3C88;
-    text-shadow:0px 2px 6px rgba(0,0,0,0.25);'>
-        🧬 Blastocyst Grading
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-
-# Optional patient information
-with st.expander("📋 Add Patient Information (Optional)"):
-    col1, col2 = st.columns(2)
-    with col1:
-        patient_id = st.text_input("Patient ID")
-        patient_age = st.number_input("Age", min_value=18, max_value=50, value=30)
-    with col2:
-        cycle_day = st.text_input("Cycle Day", value="Day 5")
-        embryo_id = st.text_input("Embryo ID")
-
-uploaded = st.file_uploader("Upload embryo image", type=["png", "jpg", "jpeg"])
+# Sidebar
+with st.sidebar:
+    st.markdown("### 🧬 Navigation")
+    page = st.radio("Go to", ["📊 Analysis", "📜 History", "📈 Statistics", "ℹ️ About"])
+    
+    st.markdown("---")
+    st.markdown("### ⚙️ Settings")
+    show_probabilities = st.checkbox("Show Success Probabilities", value=True)
+    detailed_mode = st.checkbox("Detailed Analysis Mode", value=True)
+    
+    st.markdown("---")
+    st.markdown("### 📞 Support")
+    st.info("For technical support, contact: support@embryograding.com")
 
 
-# ---------------- PREDICTION ----------------
-def predict(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
-    x = np.expand_dims(img / 255.0, axis=0)
-
-    icm, te, exp = model.predict(x, verbose=0)
-
-    return (
-        int(np.argmax(icm[0]) + 1),
-        int(np.argmax(te[0]) + 1),
-        int(np.argmax(exp[0]) + 1)
-    )
-
-
-# ---------------- SHOW OUTPUT ----------------
-if uploaded is not None:
-    file_bytes = np.frombuffer(uploaded.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
-    st.image(img, caption="Uploaded embryo", use_container_width=True)
-
-    icm, te, exp = predict(img)
-
-    # Prepare patient info dictionary
-    patient_info = {}
-    if patient_id:
-        patient_info["Patient ID"] = patient_id
-    if patient_age:
-        patient_info["Patient Age"] = str(patient_age)
-    if cycle_day:
-        patient_info["Cycle Day"] = cycle_day
-    if embryo_id:
-        patient_info["Embryo ID"] = embryo_id
-
-    # prediction card styling
-    st.markdown(
-        """
-        <style>
-
-        .prediction-card {
-            background: rgba(255,255,255,0.82);
-            padding: 20px;
-            border-radius: 16px;
-            max-width: 520px;
-            margin-left: auto;
-            margin-right: auto;
-            margin-top: 10px;
-            box-shadow: 0 10px 28px rgba(0,0,0,0.12);
-        }
-
-        .prediction-card * {
-            color: #0F265C !important;
-            font-weight: 700;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown('<div class="center-box">', unsafe_allow_html=True)
-
-    st.markdown(
-        """
-        <div style="
-            text-align: center;
-            color: #000000;
-            font-size: 26px;
-            font-weight: 800;
-            margin-top: 10px;
-        ">
-            Prediction
+# Main content based on page selection
+if page == "📊 Analysis":
+    # Header
+    st.markdown("""
+        <div style='text-align:center; padding: 20px;'>
+            <h1 style='color:#1F3C88; text-shadow:0px 2px 6px rgba(0,0,0,0.25);'>
+                🧬 Blastocyst Grading System
+            </h1>
+            <p style='color:#666; font-size: 18px;'>AI-Powered Embryo Quality Assessment</p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f"""
-        <div style="
-            text-align: center;
-            color: #000000;
-            font-size: 18px;
-            font-weight: 600;
-            margin-top: 6px;
-        ">
-            ICM: {icm}
-            <br>
-            TE : {te}
-            <br>
-            EXP: {exp}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    summary, notes = get_inference(icm, te, exp)
-
-    st.markdown(
-        f"""
-        <div style="
-            text-align: center;
-            color: #000000;
-            font-size: 24px;
-            font-weight: 800;
-            margin-top: 10px;
-        ">
-            Inference
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f"""
-        <div style="
-            text-align: center;
-            color: #000000;
-            font-size: 18px;
-            font-weight: 600;
-            margin-top: 10px;
-        ">
-            {summary}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    for n in notes:
-        st.markdown(
-            f"""
-            <div style="
-                text-align: center;
-                color: #000000;
-                font-size: 16px;
-                margin-top: 4px;
-            ">
-                {n}
-            </div>
-            """,
-            unsafe_allow_html=True
+    """, unsafe_allow_html=True)
+    
+    # Patient Information Section
+    with st.expander("📋 Patient Information", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            patient_id = st.text_input("Patient ID", placeholder="e.g., PT-2024-001")
+            patient_name = st.text_input("Patient Name", placeholder="Optional")
+        with col2:
+            patient_age = st.number_input("Age", min_value=18, max_value=50, value=30)
+            doctor_name = st.text_input("Doctor Name", placeholder="Optional")
+        with col3:
+            cycle_day = st.selectbox("Cycle Day", ["Day 3", "Day 5", "Day 6"])
+            embryo_id = st.text_input("Embryo ID", placeholder="e.g., EMB-001")
+    
+    # File upload
+    st.markdown("### 📤 Upload Embryo Image")
+    uploaded = st.file_uploader("", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+    
+    # Prediction function
+    def predict(img):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
+        x = np.expand_dims(img / 255.0, axis=0)
+        icm, te, exp = model.predict(x, verbose=0)
+        return (
+            int(np.argmax(icm[0]) + 1),
+            int(np.argmax(te[0]) + 1),
+            int(np.argmax(exp[0]) + 1)
         )
-
-    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Doctor Suggestions Section
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    st.markdown(
-        """
-        <div style="
-            text-align: center;
-            color: #1F3C88;
-            font-size: 24px;
-            font-weight: 800;
-            margin-top: 20px;
-        ">
-            👨‍⚕️ Clinical Recommendations
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    suggestions = get_doctor_suggestions(icm, te, exp)
-    
-    suggestions_html = "<div class='suggestion-box' style='text-align: left;'>"
-    for suggestion in suggestions:
-        suggestions_html += f"<p style='margin: 8px 0; color: #333;'>{suggestion}</p>"
-    suggestions_html += "</div>"
-    
-    st.markdown(suggestions_html, unsafe_allow_html=True)
-    
-    # Download Report Section
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    st.markdown(
-        """
-        <div style="
-            text-align: center;
-            color: #1F3C88;
-            font-size: 24px;
-            font-weight: 800;
-            margin-top: 20px;
-        ">
-            📥 Download Report
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    # Generate report
-    report_text = generate_detailed_report(icm, te, exp, img, patient_info if patient_info else None)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        # Download as text file
-        st.download_button(
-            label="📄 Download Text Report",
-            data=report_text,
-            file_name=f"blastocyst_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            mime="text/plain",
-            use_container_width=True
-        )
+    if uploaded is not None:
+        file_bytes = np.frombuffer(uploaded.read(), np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        # Display image
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image(img, caption="Uploaded Embryo Image", use_container_width=True)
         
-        # Preview report in expander
-        with st.expander("👁️ Preview Full Report"):
-            st.text(report_text)
+        # Analyze button
+        if st.button("🔬 Analyze Embryo", type="primary", use_container_width=True):
+            with st.spinner("Analyzing embryo image..."):
+                icm, te, exp = predict(img)
+                
+                # Prepare patient info
+                patient_info = {}
+                if patient_id:
+                    patient_info["Patient ID"] = patient_id
+                if patient_name:
+                    patient_info["Patient Name"] = patient_name
+                if patient_age:
+                    patient_info["Age"] = str(patient_age)
+                if doctor_name:
+                    patient_info["Doctor"] = doctor_name
+                if cycle_day:
+                    patient_info["Cycle Day"] = cycle_day
+                if embryo_id:
+                    patient_info["Embryo ID"] = embryo_id
+                
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Save to history
+                save_to_history(patient_info, icm, te, exp, timestamp)
+                
+                st.success("✅ Analysis Complete!")
+                
+                # Results section
+                st.markdown("---")
+                st.markdown("## 📊 Grading Results")
+                
+                # Metrics in columns
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.markdown(f"""
+                        <div class='metric-card'>
+                            <h3>ICM</h3>
+                            <h1>{icm}/5</h1>
+                            <p>{'⭐' * icm}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                        <div class='metric-card'>
+                            <h3>TE</h3>
+                            <h1>{te}/5</h1>
+                            <p>{'⭐' * te}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown(f"""
+                        <div class='metric-card'>
+                            <h3>EXP</h3>
+                            <h1>{exp}/5</h1>
+                            <p>{'⭐' * exp}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                with col4:
+                    avg_score = (icm + te + exp) / 3
+                    st.markdown(f"""
+                        <div class='metric-card'>
+                            <h3>Average</h3>
+                            <h1>{avg_score:.2f}</h1>
+                            <p>Overall Score</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                # Success probability
+                if show_probabilities:
+                    success_prob, prob_type = calculate_success_probability(icm, te, exp)
+                    st.markdown(f"""
+                        <div class='info-card' style='text-align: center;'>
+                            <h3>🎯 Estimated Success Probability</h3>
+                            <h2 style='color: #1F3C88;'>{success_prob}</h2>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                # Inference
+                st.markdown("## 🔬 Clinical Inference")
+                summary, notes = get_inference(icm, te, exp)
+                
+                st.markdown(f"""
+                    <div class='info-card'>
+                        <h3>{summary}</h3>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                for note in notes:
+                    st.markdown(f"<div style='padding: 8px;'>{note}</div>", unsafe_allow_html=True)
+                
+                # Recommendations
+                if detailed_mode:
+                    st.markdown("## 👨‍⚕️ Clinical Recommendations")
+                    suggestions = get_doctor_suggestions(icm, te, exp)
+                    
+                    suggestions_html = "<div class='suggestion-box'>"
+                    for suggestion in suggestions:
+                        suggestions_html += f"<p style='margin: 6px 0;'>{suggestion}</p>"
+                    suggestions_html += "</div>"
+                    
+                    st.markdown(suggestions_html, unsafe_allow_html=True)
+                
+                # Download section
+                st.markdown("## 📥 Download Report")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    pdf_buffer = generate_pdf_report(icm, te, exp, img, patient_info)
+                    st.download_button(
+                        label="📄 Download PDF Report",
+                        data=pdf_buffer,
+                        file_name=f"blastocyst_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                
+                with col2:
+                    # JSON export
+                    json_data = {
+                        'timestamp': timestamp,
+                        'patient_info': patient_info,
+                        'results': {
+                            'icm': icm,
+                            'te': te,
+                            'exp': exp,
+                            'average': float(avg_score)
+                        }
+                    }
+                    st.download_button(
+                        label="💾 Export as JSON",
+                        data=json.dumps(json_data, indent=2),
+                        file_name=f"embryo_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
 
-# close center block
-st.markdown("</div>", unsafe_allow_html=True)
+elif page == "📜 History":
+    st.markdown("## 📜 Analysis History")
+    
+    if len(st.session_state.history) == 0:
+        st.info("No analysis history yet. Start by analyzing an embryo image!")
+    else:
+        # Search and filter
+        search_term = st.text_input("🔍 Search by Patient ID or Embryo ID", "")
+        
+        filtered_history = st.session_state.history
+        if search_term:
+            filtered_history = [
+                h for h in st.session_state.history 
+                if search_term.lower() in str(h.get('patient_info', {})).lower()
+            ]
+        
+        st.markdown(f"**Total Records:** {len(filtered_history)}")
+        
+        # Display history
+        for idx, entry in enumerate(filtered_history):
+            with st.expander(f"📋 {entry['timestamp']} - Avg Score: {entry['avg_score']:.2f}"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Patient Information:**")
+                    for key, value in entry['patient_info'].items():
+                        st.write(f"- {key}: {value}")
+                
+                with col2:
+                    st.markdown("**Grading Results:**")
+                    st.write(f"- ICM: {entry['icm']}/5")
+                    st.write(f"- TE: {entry['te']}/5")
+                    st.write(f"- EXP: {entry['exp']}/5")
+                    st.write(f"- Average: {entry['avg_score']:.2f}/5")
+        
+        # Clear history button
+        if st.button("🗑️ Clear All History", type="secondary"):
+            st.session_state.history = []
+            st.rerun()
 
-def add_logo():
-    try:
-        with open("logo.png", "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
-
-        st.markdown(
-            f"""
-            <style>
-            .logo-container {{
-                position: fixed;
-                right: 25px;
-                bottom: 25px;
-                z-index: 9999;
-            }}
-
-            .logo-container img {{
-                width: 180px;
-                opacity: 0.92;
-            }}
-            </style>
-
-            <div class="logo-container">
-                <img src="data:image/png;base64,{encoded}">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    except:
-        pass  # If logo not found, continue without it
-
-add_logo()
+elif page == "📈 Statistics":
+    st.markdown("## 📈 Analysis Statistics")
+    
+    if len(st.session_state.history) == 0:
+        st.info("No data available yet. Analyze some embryos to see statistics!")
+    else:
+        # Calculate statistics
+        total_analyses = len(st.session_state.history)
+        avg_icm = np.mean([h['icm'] for h in st.session_state.history])
+        avg_te = np.mean([h['te'] for h in st.session_state.history])
+        avg_exp = np.mean([h['exp'] for h in st.session_state.history])
+        avg_overall = np.mean([h['avg_score'] for h in st.session_state.history])
+        
+        high_quality = sum(1 for h in st.session_state.history if h['avg_score'] >= 4)
+        medium_quality = sum(1 for h in st.session_state.history if 3 <= h['avg_score'] < 4)
+        low_quality = sum(1 for h in st.session_state.history if h['avg_score'] < 3)
+        
+        # Display stats
