@@ -115,7 +115,7 @@ add_bg("background1.jpg")
 
 
 # ---------------- MODEL ----------------
-model = tf.keras.models.load_model("blastocyst_exp_focused.keras")
+model = tf.keras.models.load_model("embryo_output_model.keras")
 
 
 # ---------------- CENTER LAYOUT ----------------
