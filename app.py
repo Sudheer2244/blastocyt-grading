@@ -111,7 +111,7 @@ def add_bg(image_file):
     )
 
 
-add_bg("background.png")
+add_bg("C:\\Users\\sudhe\\OneDrive\\Desktop\\Blastocyst grading\\background1.jpg")
 
 
 # ---------------- MODEL ----------------
