@@ -420,7 +420,7 @@ def add_bg(image_file):
     except:
         pass
 
-add_bg("background 2.jpg")
+add_bg("background1.jpg")
 
 # Load model
 @st.cache_resource
