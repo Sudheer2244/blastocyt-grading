@@ -229,20 +229,52 @@ st.markdown("""
     }
     
     .info-card {
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.98);
         padding: 25px;
         border-radius: 15px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         margin: 20px 0;
+        color: #000000;
+    }
+    
+    .info-card h3 {
+        color: #1F3C88 !important;
+        font-weight: 700;
     }
     
     .recommendation-box {
-        background: linear-gradient(135deg, #FFF5E1 0%, #FFE4B5 100%);
-        padding: 20px;
+        background: rgba(255, 255, 255, 0.98);
+        padding: 25px;
         border-radius: 12px;
         border-left: 5px solid #FFA500;
         margin: 15px 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        color: #000000;
+    }
+    
+    .recommendation-box h4 {
+        color: #1F3C88 !important;
+        font-weight: 700;
+        margin-top: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .recommendation-box p {
+        color: #2c3e50 !important;
+        line-height: 1.8;
+        margin: 8px 0;
+        font-size: 15px;
+    }
+    
+    .analysis-note {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: #000000 !important;
+        font-size: 16px;
+        font-weight: 500;
     }
     
     .success-prob {
@@ -458,12 +490,16 @@ if page == "🔬 Analysis":
                 
                 st.markdown(f"""
                     <div class='info-card'>
-                        <h3>{summary}</h3>
+                        <h3 style='color: #1F3C88; font-size: 20px;'>{summary}</h3>
                     </div>
                 """, unsafe_allow_html=True)
                 
                 for note in notes_list:
-                    st.markdown(f"<div style='padding: 10px;'>{note}</div>", unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <div class='analysis-note'>
+                            {note}
+                        </div>
+                    """, unsafe_allow_html=True)
                 
                 # Recommendations
                 if show_recommendations:
@@ -473,9 +509,10 @@ if page == "🔬 Analysis":
                     rec_html = "<div class='recommendation-box'>"
                     for rec in recommendations:
                         if rec.startswith('###'):
-                            rec_html += f"<h4 style='color: #1F3C88;'>{rec.replace('###', '').strip()}</h4>"
+                            clean_heading = rec.replace('###', '').strip()
+                            rec_html += f"<h4 style='color: #1F3C88; font-size: 18px; font-weight: 700; margin-top: 15px;'>{clean_heading}</h4>"
                         else:
-                            rec_html += f"<p>{rec}</p>"
+                            rec_html += f"<p style='color: #2c3e50; font-size: 15px; line-height: 1.8; margin: 8px 0;'>{rec}</p>"
                     rec_html += "</div>"
                     
                     st.markdown(rec_html, unsafe_allow_html=True)
