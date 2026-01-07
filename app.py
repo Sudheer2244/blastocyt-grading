@@ -694,4 +694,4 @@ elif page == "📈 Statistics":
         medium_quality = sum(1 for h in st.session_state.history if 3 <= h['avg_score'] < 4)
         low_quality = sum(1 for h in st.session_state.history if h['avg_score'] < 3)
         
-        # Display stats
+     
