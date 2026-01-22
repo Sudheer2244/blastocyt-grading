@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embryo Grading System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .slide {
+            background: white;
+            border-radius: 20px;
+            padding: 60px;
+            margin: 40px 0;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title-slide {
+            text-align: center;
+            background: linear-gradient(135deg, #1a5490 0%, #2980b9 100%);
+            color: white;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title-slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .title-slide .subtitle {
+            font-size: 1.5em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .title-slide .icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #1a5490;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            color: #2980b9;
+            font-size: 1.8em;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+        }
+
+        .card h4 {
+            color: #1a5490;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .stat-box .number {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-box .label {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-left: 5px solid #3498db;
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+
+        .feature-list li:before {
+            content: "✓ ";
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-right: 10px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 25px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .architecture-diagram {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .flow-step {
+            display: inline-block;
+            padding: 20px 30px;
+            margin: 10px;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .arrow {
+            display: inline-block;
+            color: #3498db;
+            font-size: 2em;
+            margin: 0 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            font-size: 1.1em;
+        }
+
+        tr:hover {
+            background: #f5f7fa;
+        }
+
+        .conclusion-box {
+            background: linear-gradient(135deg, #16a085 0%, #27ae60 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .conclusion-box h3 {
+            color: white;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .conclusion-box p {
+            font-size: 1.3em;
+            line-height: 1.8;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background: #3498db;
+            color: white;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 30px;
+            }
+            
+            .title-slide h1 {
+                font-size: 2em;
+            }
+            
+            h2 {
+                font-size: 1.8em;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Title Slide -->
+        <div class="slide title-slide">
+            <div class="icon">🧬</div>
+            <h1>Embryo Grading System</h1>
+            <p class="subtitle">Deep Learning for Blastocyst Quality Assessment</p>
+            <p style="margin-top: 30px; font-size: 1.2em;">A Clinical Decision Support Tool</p>
+        </div>
+
+        <!-- Problem Statement -->
+        <div class="slide">
+            <h2>📋 Problem Statement</h2>
+            <p style="font-size: 1.2em; line-height: 1.8; margin: 20px 0;">
+                Due to increasing stress, heavy change and environmental factors, infertility cases are rising globally. 
+                <strong>40-45% for women under 35, dropping to 10-20%</strong> for women above 40.
+            </p>
+            <div class="content-grid">
+                <div class="card">
+                    <h4>Challenge</h4>
+                    <p>Manual embryo grading is subjective, time-consuming, and requires extensive expertise from embryologists.</p>
+                </div>
+                <div class="card">
+                    <h4>Impact</h4>
+                    <p>Inconsistent grading leads to suboptimal embryo selection, affecting IVF success rates and patient outcomes.</p>
+                </div>
+                <div class="card">
+                    <h4>Solution</h4>
+                    <p>AI-powered automated grading system providing objective, consistent, and rapid embryo quality assessment.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="slide">
+            <h2>🎯 Project Overview</h2>
+            <p style="font-size: 1.2em; margin-bottom: 30px;">
+                This system uses deep learning to automatically grade blastocyst embryos based on three critical parameters:
+            </p>
+            <div class="content-grid">
+                <div class="stat-box">
+                    <div class="number">ICM</div>
+                    <div class="label">Inner Cell Mass</div>
+                    <p style="margin-top: 15px; font-size: 0.9em;">Quality of cells that form the fetus</p>
+                </div>
+                <div class="stat-box">
+                    <div class="number">TE</div>
+                    <div class="label">Trophectoderm</div>
+                    <p style="margin-top: 15px; font-size: 0.9em;">Quality of cells that form the placenta</p>
+                </div>
+                <div class="stat-box">
+                    <div class="number">EXP</div>
+                    <div class="label">Expansion Grade</div>
+                    <p style="margin-top: 15px; font-size: 0.9em;">Blastocyst expansion level</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dataset Information -->
+        <div class="slide">
+            <h2>📊 Dataset Information</h2>
+            <div class="content-grid">
+                <div class="card">
+                    <h4>Dataset Size</h4>
+                    <p><strong>753 blastocyst images</strong> with clinical annotations</p>
+                </div>
+                <div class="card">
+                    <h4>Image Format</h4>
+                    <p>PNG format, resized to <strong>224×224 pixels</strong></p>
+                </div>
+                <div class="card">
+                    <h4>Labels</h4>
+                    <p>Three grading parameters: <strong>EXP, ICM, TE</strong> (scale 1-5)</p>
+                </div>
+            </div>
+            
+            <h3>Data Split</h3>
+            <table>
+                <tr>
+                    <th>Split</th>
+                    <th>Percentage</th>
+                    <th>Number of Images</th>
+                </tr>
+                <tr>
+                    <td>Training Set</td>
+                    <td>70%</td>
+                    <td>~527 images</td>
+                </tr>
+                <tr>
+                    <td>Validation Set</td>
+                    <td>15%</td>
+                    <td>~113 images</td>
+                </tr>
+                <tr>
+                    <td>Test Set</td>
+                    <td>15%</td>
+                    <td>~113 images</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Model Architecture -->
+        <div class="slide">
+            <h2>🗂️ Model Architecture</h2>
+            <h3>Base Model: EfficientNetB0</h3>
+            <p style="font-size: 1.1em; margin: 20px 0;">
+                Transfer learning approach using pre-trained EfficientNetB0 with ImageNet weights
+            </p>
+            
+            <div class="architecture-diagram">
+                <div class="flow-step">Input Image<br>224×224×3</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">Data<br>Augmentation</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">EfficientNetB0<br>Feature Extraction</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">Global Average<br>Pooling</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">Dense Layer<br>(256 units)</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">Dropout<br>(0.5)</div>
+                <span class="arrow">→</span>
+                <div class="flow-step">3 Output Heads<br>ICM/TE/EXP</div>
+            </div>
+
+            <h3>Key Features</h3>
+            <ul class="feature-list">
+                <li><strong>Fine-tuning:</strong> Last 30 layers unfrozen for domain adaptation</li>
+                <li><strong>Multi-output architecture:</strong> Simultaneous prediction of ICM, TE, and EXP</li>
+                <li><strong>Data augmentation:</strong> Random flip, rotation, zoom, contrast, and brightness</li>
+                <li><strong>Regularization:</strong> Dropout (0.5) to prevent overfitting</li>
+            </ul>
+
+            <h3>Model Parameters</h3>
+            <div class="content-grid">
+                <div class="stat-box">
+                    <div class="number">4.38M</div>
+                    <div class="label">Total Parameters</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">1.83M</div>
+                    <div class="label">Trainable Parameters</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">2.55M</div>
+                    <div class="label">Non-trainable Parameters</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Process -->
+        <div class="slide">
+            <h2>⚙️ Training Configuration</h2>
+            <div class="content-grid">
+                <div class="card">
+                    <h4>Optimizer</h4>
+                    <p><strong>Adam</strong> with learning rate <strong>1×10⁻⁴</strong></p>
+                </div>
+                <div class="card">
+                    <h4>Loss Function</h4>
+                    <p><strong>Sparse Categorical Crossentropy</strong> for each output</p>
+                </div>
+                <div class="card">
+                    <h4>Training Duration</h4>
+                    <p><strong>25 epochs</strong> with batch size of <strong>16</strong></p>
+                </div>
+            </div>
+
+            <h3>Data Augmentation Techniques</h3>
+            <ul class="feature-list">
+                <li>Horizontal flipping for orientation invariance</li>
+                <li>Random rotation (±15 degrees) to handle various image orientations</li>
+                <li>Random zoom (±20%) for scale variations</li>
+                <li>Contrast adjustment (±20%) for lighting variations</li>
+                <li>Brightness adjustment (±20%) for exposure differences</li>
+            </ul>
+        </div>
+
+        <!-- Results -->
+        <div class="slide">
+            <h2>📈 Model Performance</h2>
+            
+            <h3>Final Accuracy Metrics</h3>
+            <div class="content-grid">
+                <div class="stat-box" style="background: linear-gradient(135deg, #16a085 0%, #27ae60 100%);">
+                    <div class="number">77.67%</div>
+                    <div class="label">Training Accuracy</div>
+                </div>
+                <div class="stat-box" style="background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);">
+                    <div class="number">73.45%</div>
+                    <div class="label">Validation Accuracy</div>
+                </div>
+                <div class="stat-box" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">
+                    <div class="number">85.55%</div>
+                    <div class="label">Test Accuracy</div>
+                </div>
+            </div>
+
+            <h3>Per-Parameter Test Performance</h3>
+            <table>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Test Accuracy</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><strong>EXP</strong></td>
+                    <td>72.57%</td>
+                    <td>Expansion grade prediction</td>
+                </tr>
+                <tr>
+                    <td><strong>ICM</strong></td>
+                    <td>92.04%</td>
+                    <td>Inner cell mass quality</td>
+                </tr>
+                <tr>
+                    <td><strong>TE</strong></td>
+                    <td>92.04%</td>
+                    <td>Trophectoderm quality</td>
+                </tr>
+            </table>
+
+            <p style="margin-top: 30px; font-size: 1.1em; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <strong>Key Insight:</strong> The model achieves excellent performance on ICM and TE grading (92% accuracy), 
+                indicating strong capability in assessing cellular quality. The EXP parameter shows good but slightly lower 
+                accuracy (72.57%), which is common as expansion assessment can be more challenging.
+            </p>
+        </div>
+
+        <!-- Web Application -->
+        <div class="slide">
+            <h2>🌐 Streamlit Web Application</h2>
+            
+            <h3>Core Features</h3>
+            <ul class="feature-list">
+                <li><strong>Image Upload:</strong> Support for PNG, JPG, and JPEG formats</li>
+                <li><strong>Real-time Prediction:</strong> Instant grading upon image upload</li>
+                <li><strong>Patient Information:</strong> Optional fields for patient ID, age, cycle day, and embryo ID</li>
+                <li><strong>Visual Feedback:</strong> Color-coded inference indicators (🟢 Good, 🟡 Moderate, 🔴 Poor)</li>
+                <li><strong>Clinical Recommendations:</strong> Detailed suggestions based on grading results</li>
+                <li><strong>Report Generation:</strong> Downloadable comprehensive text reports</li>
+                <li><strong>Custom Styling:</strong> Professional medical interface with logo integration</li>
+            </ul>
+
+            <h3>Clinical Decision Support</h3>
+            <div class="card">
+                <h4>Automated Recommendations Include:</h4>
+                <ul style="margin-top: 15px; line-height: 2;">
+                    <li>Transfer suitability assessment</li>
+                    <li>Parameter-specific recommendations (ICM, TE, EXP)</li>
+                    <li>Suggested alternative strategies for low-quality embryos</li>
+                    <li>Follow-up and documentation guidelines</li>
+                    <li>Patient counseling recommendations</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="slide">
+            <h2>💻 Technology Stack</h2>
+            
+            <h3>Deep Learning & ML</h3>
+            <div style="margin: 20px 0;">
+                <span class="tech-badge">TensorFlow 2.x</span>
+                <span class="tech-badge">Keras</span>
+                <span class="tech-badge">EfficientNet</span>
+                <span class="tech-badge">scikit-learn</span>
+            </div>
+
+            <h3>Data Processing</h3>
+            <div style="margin: 20px 0;">
+                <span class="tech-badge">NumPy</span>
+                <span class="tech-badge">Pandas</span>
+                <span class="tech-badge">OpenCV</span>
+                <span class="tech-badge">PIL</span>
+            </div>
+
+            <h3>Web Application</h3>
+            <div style="margin: 20px 0;">
+                <span class="tech-badge">Streamlit</span>
+                <span class="tech-badge">HTML/CSS</span>
+                <span class="tech-badge">Python 3.13</span>
+            </div>
+
+            <h3>Development Environment</h3>
+            <div style="margin: 20px 0;">
+                <span class="tech-badge">Jupyter Notebook</span>
+                <span class="tech-badge">VS Code</span>
+                <span class="tech-badge">Git</span>
+            </div>
+        </div>
+
+        <!-- Key Implementation Details -->
+        <div class="slide">
+            <h2>🔑 Key Implementation Details</h2>
+            
+            <h3>Label Normalization</h3>
+            <p style="font-size: 1.1em; margin: 20px 0;">
+                Original labels (1-5) converted to zero-based indexing (0-2) for 3-class classification:
+            </p>
+            <div class="code-block">
+y_train = np.maximum(y_train - 1, 0)
+y_train = np.clip(y_train, 0, 2)
+            </div>
+
+            <h3>Multi-Output Model Structure</h3>
+            <div class="code-block">
+exp_out = Dense(3, activation="softmax", name="exp")(x)
+icm_out = Dense(3, activation="softmax", name="icm")(x)
+te_out  = Dense(3, activation="softmax", name="te")(x)
+
+model = Model(inputs=inputs, 
+              outputs=[exp_out, icm_out, te_out])
+            </div>
+
+            <h3>Clinical Inference Logic</h3>
+            <ul class="feature-list">
+                <li><strong>High Quality:</strong> ICM ≥4, TE ≥4, EXP ≥4 → Excellent transfer candidate</li>
+                <li><strong>Medium Quality:</strong> ICM ≥3, TE ≥3, EXP ≥3 → Acceptable with monitoring</li>
+                <li><strong>Low Quality:</strong> Below thresholds → Alternative strategies recommended</li>
+            </ul>
+        </div>
+
+        <!-- Clinical Impact -->
+        <div class="slide">
+            <h2>🏥 Clinical Impact & Benefits</h2>
+            
+            <div class="content-grid">
+                <div class="card">
+                    <h4>⏱️ Time Efficiency</h4>
+                    <p>Reduces grading time from several minutes to seconds per embryo, allowing embryologists to focus on decision-making.</p>
+                </div>
+                <div class="card">
+                    <h4>🎯 Consistency</h4>
+                    <p>Eliminates inter-observer variability, providing standardized assessments across all cases.</p>
+                </div>
+                <div class="card">
+                    <h4>📊 Data-Driven</h4>
+                    <p>Leverages patterns from large datasets to make objective, evidence-based predictions.</p>
+                </div>
+                <div class="card">
+                    <h4>🤝 Clinical Support</h4>
+                    <p>Provides detailed recommendations to assist clinicians in making informed decisions.</p>
+                </div>
+                <div class="card">
+                    <h4>📝 Documentation</h4>
+                    <p>Generates comprehensive reports for medical records and patient communication.</p>
+                </div>
+                <div class="card">
+                    <h4>🌍 Accessibility</h4>
+                    <p>Makes expert-level embryo assessment available in clinics with limited specialist access.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Future Enhancements -->
+        <div class="slide">
+            <h2>🚀 Future Enhancements</h2>
+            
+            <h3>Model Improvements</h3>
+            <ul class="feature-list">
+                <li>Expand dataset with more diverse embryo images from multiple clinics</li>
+                <li>Implement ensemble methods combining multiple architectures</li>
+                <li>Add temporal analysis using time-lapse imaging sequences</li>
+                <li>Incorporate attention mechanisms to highlight critical features</li>
+            </ul>
+
+            <h3>Application Features</h3>
+            <ul class="feature-list">
+                <li>Real-time video analysis for continuous monitoring</li>
+                <li>Integration with laboratory information management systems (LIMS)</li>
+                <li>Multi-language support for global deployment</li>
+                <li>Mobile application for point-of-care assessment</li>
+                <li>Advanced analytics dashboard for clinic performance tracking</li>
+            </ul>
+
+            <h3>Clinical Integration</h3>
+            <ul class="feature-list">
+                <li>Integration with electronic health records (EHR)</li>
+                <li>Multi-center validation studies</li>
+                <li>Regulatory compliance (FDA, CE marking)</li>
+                <li>Explainable AI features for clinical trust</li>
+            </ul>
+        </div>
+
+        <!-- Challenges & Solutions -->
+        <div class="slide">
+            <h2>⚠️ Challenges & Solutions</h2>
+            
+            <table>
+                <tr>
+                    <th>Challenge</th>
+                    <th>Solution Implemented</th>
+                </tr>
+                <tr>
+                    <td><strong>Limited Dataset Size</strong></td>
+                    <td>Transfer learning with EfficientNetB0 and extensive data augmentation</td>
+                </tr>
+                <tr>
+                    <td><strong>Class Imbalance</strong></td>
+                    <td>Careful train-validation-test split and monitoring per-class performance</td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-Output Training</strong></td>
+                    <td>Individual loss functions for each parameter with balanced optimization</td>
+                </tr>
+                <tr>
+                    <td><strong>Label Inconsistencies</strong></td>
+                    <td>Robust label normalization and validation checks</td>
+                </tr>
+                <tr>
+                    <td><strong>Overfitting Risk</strong></td>
+                    <td>Dropout layers, data augmentation, and validation monitoring</td>
+                </tr>
+                <tr>
+                    <td><strong>Clinical Interpretability</strong></td>
+                    <td>Detailed inference logic and clinical recommendation system</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="slide">
+            <div class="conclusion-box">
+                <h3>🎉 Conclusion</h3>
+                <p>
+                    This AI-powered embryo grading system demonstrates the potential of deep learning in 
+                    reproductive medicine, achieving <strong>85.55% test accuracy</strong> with excellent 
+                    performance on critical cellular quality parameters.
+                </p>
+                <p style="margin-top: 20px;">
+                    The system provides objective, consistent, and rapid embryo assessment, supporting 
+                    clinicians in making informed decisions that can improve IVF success rates and 
+                    patient outcomes.
+                </p>
+            </div>
+
+            <h3 style="margin-top: 40px; text-align: center;">Key Achievements</h3>
+            <div class="content-grid" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <div class="number">92%</div>
+                    <div class="label">ICM & TE Accuracy</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">753</div>
+                    <div class="label">Training Images</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">3</div>
+                    <div class="label">Grading Parameters</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thank You -->
+        <div class="slide title-slide">
+            <div class="icon">🙏</div>
+            <h1>Thank You!</h1>
+            <p class="subtitle">Embryo Grading System</p>
+            <p style="margin-top: 30px; font-size: 1.2em;">Questions & Discussion</p>
+        </div>
+    </div>
+</body>
+</html>
